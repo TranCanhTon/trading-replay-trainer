@@ -1,0 +1,207 @@
+.app {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 1rem 1.5rem 3rem;
+  color: #d1d4dc;
+}
+
+header h1 {
+  font-size: 1.4rem;
+  margin-bottom: 1rem;
+}
+
+.error.banner {
+  background: #3a1f1f;
+  color: #ef5350;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  margin-bottom: 1rem;
+}
+
+.start-panel {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-end;
+}
+
+.start-panel label,
+.trade-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.85rem;
+}
+
+.session-layout {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 1.5rem;
+  align-items: start;
+}
+
+.chart-column {
+  min-width: 0;
+}
+
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 0.75rem;
+}
+
+.progress {
+  color: #9aa0aa;
+  font-size: 0.9rem;
+}
+
+.inline-label {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.8rem;
+  color: #9aa0aa;
+}
+
+.controls .hint {
+  color: #6b7280;
+  font-size: 0.75rem;
+  margin-left: auto;
+}
+
+.trade-form .hint {
+  color: #6b7280;
+  font-size: 0.75rem;
+  margin: -0.4rem 0 0;
+}
+
+.toast-stack {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  z-index: 1000;
+  max-width: 340px;
+}
+
+.toast {
+  padding: 0.6rem 0.9rem;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  background: #1a1e29;
+  border: 1px solid #2a2e39;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+.toast-success {
+  border-color: #26a69a;
+}
+
+.toast-danger {
+  border-color: #ef5350;
+}
+
+.toast-info {
+  border-color: #4c78ff;
+}
+
+.side-column {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.trade-form,
+.trades-panel,
+.session-summary {
+  background: #1a1e29;
+  border: 1px solid #2a2e39;
+  border-radius: 8px;
+  padding: 1rem;
+}
+
+.trade-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.input-with-button {
+  display: flex;
+  gap: 0.5rem;
+}
+
+input,
+select,
+button {
+  background: #131722;
+  color: #d1d4dc;
+  border: 1px solid #2a2e39;
+  border-radius: 4px;
+  padding: 0.4rem 0.6rem;
+  font-size: 0.9rem;
+}
+
+button {
+  cursor: pointer;
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+button:hover:not(:disabled) {
+  border-color: #4c78ff;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+  margin-bottom: 0.75rem;
+}
+
+th,
+td {
+  text-align: left;
+  padding: 0.3rem 0.4rem;
+  border-bottom: 1px solid #2a2e39;
+}
+
+.muted {
+  color: #6b7280;
+  font-size: 0.85rem;
+}
+
+.pnl-positive {
+  color: #26a69a;
+}
+
+.pnl-negative {
+  color: #ef5350;
+}
+
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+  margin: 1rem 0;
+}
+
+.summary-grid > div {
+  display: flex;
+  flex-direction: column;
+}
+
+.summary-grid .label {
+  font-size: 0.75rem;
+  color: #9aa0aa;
+}
+
+.summary-grid .value {
+  font-size: 1.2rem;
+  font-weight: 600;
+}

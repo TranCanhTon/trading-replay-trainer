@@ -19,6 +19,14 @@ data/        CSV candle data (synthetic or real, per instrument)
 - Database `trading_replay`, owned by role `replay_app` / password `replay_app_pw`, on `localhost:5432`
 - Python 3.10, Node 24 / npm 11
 
+Once the backend and frontend are each set up per steps 1–2 below, you can
+run both together with one command from the project root:
+
+```bash
+npm install   # once, to get concurrently
+npm run dev
+```
+
 ## 1. Backend
 
 ```bash

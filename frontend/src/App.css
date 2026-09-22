@@ -24,6 +24,36 @@ header h1 {
   align-items: flex-end;
 }
 
+.stats-bar {
+  display: flex;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  background: #1a1e29;
+  border: 1px solid #2a2e39;
+  border-radius: 8px;
+  padding: 0.6rem 1rem;
+  margin-bottom: 1rem;
+}
+
+.stats-bar .stat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.stats-bar .stat-label {
+  font-size: 0.7rem;
+  color: #9aa0aa;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.stats-bar .stat-value {
+  font-size: 1rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
 .start-panel label,
 .trade-form label {
   display: flex;

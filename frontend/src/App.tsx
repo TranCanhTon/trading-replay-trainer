@@ -3,9 +3,11 @@ import "./App.css";
 import { api } from "./api";
 import { Chart } from "./components/Chart";
 import { SessionSummary } from "./components/SessionSummary";
+import { StatsBar } from "./components/StatsBar";
 import { TradeForm } from "./components/TradeForm";
 import { TradesPanel } from "./components/TradesPanel";
 import { Toasts, type ToastMessage } from "./components/Toasts";
+import { realizedPnl, totalUnrealizedPnl } from "./pnl";
 import {
   STEP_MINUTES,
   STEP_SIZES,
@@ -21,6 +23,8 @@ import {
   type TradeDirection,
 } from "./types";
 
+const STARTING_BALANCE = 50000;
+
 let toastCounter = 0;
 
 function App() {
@@ -29,6 +33,7 @@ function App() {
   const [session, setSession] = useState<ReplaySession | null>(null);
   const [chartCandles, setChartCandles] = useState<Candle[]>([]);
   const [lastPrice, setLastPrice] = useState<number | null>(null);
+  const [lastCandleTimestamp, setLastCandleTimestamp] = useState<string | null>(null);
   const [trades, setTrades] = useState<Trade[]>([]);
   const [summary, setSummary] = useState<SessionSummaryType | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -60,6 +65,7 @@ function App() {
     setSession(null);
     setChartCandles([]);
     setLastPrice(null);
+    setLastCandleTimestamp(null);
     setTrades([]);
     setSummary(null);
     if (message) setError(message);
@@ -82,7 +88,10 @@ function App() {
         api.getVisibleCandles(newSession.id, "1m"),
         api.listTrades(newSession.id),
       ]);
-      setLastPrice(baseCandles.length > 0 ? baseCandles[baseCandles.length - 1].close : null);
+      if (baseCandles.length > 0) {
+        setLastPrice(baseCandles[baseCandles.length - 1].close);
+        setLastCandleTimestamp(baseCandles[baseCandles.length - 1].timestamp);
+      }
       setTrades(sessionTrades);
       await refreshChartCandles(newSession.id, timeframe);
     } catch (err) {
@@ -106,6 +115,7 @@ function App() {
       setSession(res.session);
       if (res.candles.length > 0) {
         setLastPrice(res.candles[res.candles.length - 1].close);
+        setLastCandleTimestamp(res.candles[res.candles.length - 1].timestamp);
       }
 
       if (res.filled_orders.length > 0 || res.closed_trades.length > 0 || res.cancelled_orders.length > 0) {
@@ -196,6 +206,8 @@ function App() {
 
   const isFinished = session?.status === "finished";
   const openTrades = trades.filter((t) => t.status === "open");
+  const realized = realizedPnl(trades);
+  const unrealized = totalUnrealizedPnl(trades, lastPrice);
 
   return (
     <div className="app">
@@ -225,46 +237,55 @@ function App() {
       )}
 
       {session && (
-        <div className="session-layout">
-          <div className="chart-column">
-            <Chart candles={chartCandles} openTrades={openTrades} currentPrice={lastPrice} />
-            <div className="controls">
-              <button onClick={handleNext} disabled={isFinished}>
-                Next Candle
-              </button>
-              <span className="progress">
-                Candle {session.current_index + 1} / {session.total_candles}
-              </span>
-              <label className="inline-label">
-                Timeframe
-                <select value={timeframe} onChange={(e) => handleTimeframeChange(e.target.value as Timeframe)}>
-                  {TIMEFRAMES.map((tf) => (
-                    <option key={tf} value={tf}>
-                      {tf}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="inline-label">
-                Step
-                <select value={stepSize} onChange={(e) => setStepSize(e.target.value as StepSize)}>
-                  {STEP_SIZES.map((s) => (
-                    <option key={s} value={s}>
-                      {s}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <span className="hint">Ctrl+Space also advances</span>
+        <>
+          <StatsBar
+            currentTimeIso={lastCandleTimestamp}
+            totalCandles={session.total_candles}
+            balance={STARTING_BALANCE + realized}
+            realizedPnl={realized}
+            runningPnl={realized + unrealized}
+          />
+          <div className="session-layout">
+            <div className="chart-column">
+              <Chart candles={chartCandles} openTrades={openTrades} currentPrice={lastPrice} />
+              <div className="controls">
+                <button onClick={handleNext} disabled={isFinished}>
+                  Next Candle
+                </button>
+                <span className="progress">
+                  Candle {session.current_index + 1} / {session.total_candles}
+                </span>
+                <label className="inline-label">
+                  Timeframe
+                  <select value={timeframe} onChange={(e) => handleTimeframeChange(e.target.value as Timeframe)}>
+                    {TIMEFRAMES.map((tf) => (
+                      <option key={tf} value={tf}>
+                        {tf}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="inline-label">
+                  Step
+                  <select value={stepSize} onChange={(e) => setStepSize(e.target.value as StepSize)}>
+                    {STEP_SIZES.map((s) => (
+                      <option key={s} value={s}>
+                        {s}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <span className="hint">Ctrl+Space also advances</span>
+              </div>
+              {isFinished && summary && <SessionSummary summary={summary} onRestart={() => resetToStart()} />}
             </div>
-            {isFinished && summary && <SessionSummary summary={summary} onRestart={() => resetToStart()} />}
-          </div>
 
-          <div className="side-column">
-            <TradeForm currentPrice={lastPrice} disabled={isFinished} onSubmit={handlePlaceOrder} />
-            <TradesPanel trades={trades} currentPrice={lastPrice} />
+            <div className="side-column">
+              <TradeForm currentPrice={lastPrice} disabled={isFinished} onSubmit={handlePlaceOrder} />
+              <TradesPanel trades={trades} currentPrice={lastPrice} />
+            </div>
           </div>
-        </div>
+        </>
       )}
     </div>
   );

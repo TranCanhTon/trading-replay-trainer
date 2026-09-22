@@ -1,6 +1,7 @@
 import {
   CandlestickSeries,
   createChart,
+  CrosshairMode,
   LineStyle,
   type IChartApi,
   type IPriceLine,
@@ -15,7 +16,12 @@ import type { Candle, Trade } from "../types";
 interface ChartProps {
   candles: Candle[];
   openTrades: Trade[];
+  pendingOrders: Trade[];
   currentPrice: number | null;
+  /** Bump this number to force the chart to re-fit its visible range to all
+   * data (e.g. on session start or timeframe change). Stepping through
+   * candles should NOT bump this, so the viewer's pan/zoom is preserved. */
+  fitTrigger: number;
 }
 
 interface TradeLines {
@@ -24,11 +30,12 @@ interface TradeLines {
   tp: IPriceLine;
 }
 
-export function Chart({ candles, openTrades, currentPrice }: ChartProps) {
+export function Chart({ candles, openTrades, pendingOrders, currentPrice, fitTrigger }: ChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const seriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
-  const priceLinesRef = useRef<Map<number, TradeLines>>(new Map());
+  const openLinesRef = useRef<Map<number, TradeLines>>(new Map());
+  const pendingLinesRef = useRef<Map<number, TradeLines>>(new Map());
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -42,6 +49,7 @@ export function Chart({ candles, openTrades, currentPrice }: ChartProps) {
         horzLines: { color: "#1e222d" },
       },
       timeScale: { timeVisible: true, secondsVisible: false },
+      crosshair: { mode: CrosshairMode.Normal },
     });
 
     const series = chart.addSeries(CandlestickSeries, {
@@ -55,22 +63,26 @@ export function Chart({ candles, openTrades, currentPrice }: ChartProps) {
     chartRef.current = chart;
     seriesRef.current = series;
 
-    const handleResize = () => {
-      if (containerRef.current) {
-        chart.applyOptions({ width: containerRef.current.clientWidth });
+    const resizeObserver = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      if (entry) {
+        chart.applyOptions({ width: entry.contentRect.width });
       }
-    };
-    window.addEventListener("resize", handleResize);
+    });
+    resizeObserver.observe(containerRef.current);
 
     return () => {
-      window.removeEventListener("resize", handleResize);
+      resizeObserver.disconnect();
       chart.remove();
       chartRef.current = null;
       seriesRef.current = null;
-      priceLinesRef.current.clear();
+      openLinesRef.current.clear();
+      pendingLinesRef.current.clear();
     };
   }, []);
 
+  // Update the candle series whenever the visible data changes (every step
+  // AND every timeframe switch). This intentionally does NOT touch zoom/pan.
   useEffect(() => {
     if (!seriesRef.current) return;
     const data = candles.map((c) => ({
@@ -81,13 +93,19 @@ export function Chart({ candles, openTrades, currentPrice }: ChartProps) {
       close: c.close,
     }));
     seriesRef.current.setData(data);
-    chartRef.current?.timeScale().fitContent();
   }, [candles]);
+
+  // Only re-fit the visible range when explicitly requested (session start,
+  // timeframe change) -- never on a plain step, so panning/zoom sticks.
+  useEffect(() => {
+    if (fitTrigger === 0) return;
+    chartRef.current?.timeScale().fitContent();
+  }, [fitTrigger]);
 
   useEffect(() => {
     const series = seriesRef.current;
     if (!series) return;
-    const map = priceLinesRef.current;
+    const map = openLinesRef.current;
     const openIds = new Set(openTrades.map((t) => t.id));
 
     for (const [id, lines] of map.entries()) {
@@ -138,6 +156,55 @@ export function Chart({ candles, openTrades, currentPrice }: ChartProps) {
       }
     }
   }, [openTrades, currentPrice]);
+
+  useEffect(() => {
+    const series = seriesRef.current;
+    if (!series) return;
+    const map = pendingLinesRef.current;
+    const pendingIds = new Set(pendingOrders.map((t) => t.id));
+
+    for (const [id, lines] of map.entries()) {
+      if (!pendingIds.has(id)) {
+        series.removePriceLine(lines.entry);
+        series.removePriceLine(lines.sl);
+        series.removePriceLine(lines.tp);
+        map.delete(id);
+      }
+    }
+
+    for (const order of pendingOrders) {
+      if (map.has(order.id)) continue;
+      const trigger = order.trigger_price ?? 0;
+      const label = `${order.direction === "long" ? "Long" : "Short"} ${order.order_type} pending @ ${trigger.toFixed(2)}`;
+
+      map.set(order.id, {
+        entry: series.createPriceLine({
+          price: trigger,
+          color: "#c084fc",
+          lineWidth: 2,
+          lineStyle: LineStyle.Dotted,
+          axisLabelVisible: true,
+          title: label,
+        }),
+        sl: series.createPriceLine({
+          price: order.stop_loss,
+          color: "#8b4a4a",
+          lineWidth: 1,
+          lineStyle: LineStyle.Dotted,
+          axisLabelVisible: true,
+          title: `SL (risk) ${order.stop_loss.toFixed(2)}`,
+        }),
+        tp: series.createPriceLine({
+          price: order.take_profit,
+          color: "#3f7a72",
+          lineWidth: 1,
+          lineStyle: LineStyle.Dotted,
+          axisLabelVisible: true,
+          title: `TP (reward) ${order.take_profit.toFixed(2)}`,
+        }),
+      });
+    }
+  }, [pendingOrders]);
 
   return <div ref={containerRef} />;
 }

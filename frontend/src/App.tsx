@@ -41,6 +41,7 @@ function App() {
   const [timeframe, setTimeframe] = useState<Timeframe>("1m");
   const [stepSize, setStepSize] = useState<StepSize>("1m");
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
+  const [fitTrigger, setFitTrigger] = useState(0);
 
   const sessionRef = useRef(session);
   sessionRef.current = session;
@@ -94,6 +95,7 @@ function App() {
       }
       setTrades(sessionTrades);
       await refreshChartCandles(newSession.id, timeframe);
+      setFitTrigger((n) => n + 1);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to start session");
     } finally {
@@ -103,7 +105,10 @@ function App() {
 
   const handleTimeframeChange = async (tf: Timeframe) => {
     setTimeframe(tf);
-    if (session) await refreshChartCandles(session.id, tf);
+    if (session) {
+      await refreshChartCandles(session.id, tf);
+      setFitTrigger((n) => n + 1);
+    }
   };
 
   const handleNext = async () => {
@@ -140,6 +145,8 @@ function App() {
         addToast(`${res.cancelled_orders.length} pending order(s) cancelled — session ended.`, "info");
       }
 
+      // Note: no fitTrigger bump here on purpose -- stepping should never
+      // reset the viewer's pan/zoom, only setData with the newly revealed bars.
       await refreshChartCandles(current.id, timeframe);
 
       if (res.session.status === "finished") {
@@ -206,6 +213,7 @@ function App() {
 
   const isFinished = session?.status === "finished";
   const openTrades = trades.filter((t) => t.status === "open");
+  const pendingOrders = trades.filter((t) => t.status === "pending");
   const realized = realizedPnl(trades);
   const unrealized = totalUnrealizedPnl(trades, lastPrice);
 
@@ -247,7 +255,13 @@ function App() {
           />
           <div className="session-layout">
             <div className="chart-column">
-              <Chart candles={chartCandles} openTrades={openTrades} currentPrice={lastPrice} />
+              <Chart
+                candles={chartCandles}
+                openTrades={openTrades}
+                pendingOrders={pendingOrders}
+                currentPrice={lastPrice}
+                fitTrigger={fitTrigger}
+              />
               <div className="controls">
                 <button onClick={handleNext} disabled={isFinished}>
                   Next Candle

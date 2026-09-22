@@ -8,6 +8,7 @@ import {
   type UTCTimestamp,
 } from "lightweight-charts";
 import { useEffect, useRef } from "react";
+import { toChartTime } from "../time";
 import type { Candle, Trade } from "../types";
 
 interface ChartProps {
@@ -72,7 +73,7 @@ export function Chart({ candles, openTrades, currentPrice }: ChartProps) {
   useEffect(() => {
     if (!seriesRef.current) return;
     const data = candles.map((c) => ({
-      time: (new Date(c.timestamp).getTime() / 1000) as UTCTimestamp,
+      time: toChartTime(c.timestamp) as UTCTimestamp,
       open: c.open,
       high: c.high,
       low: c.low,

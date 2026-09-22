@@ -85,6 +85,11 @@ needed, just don't delete `.npmrc`.
 
 If you ever see a "session not found" error (e.g. after the backend restarts and its in-memory dev data resets), the app now catches that automatically and returns you to the start screen instead of getting stuck.
 
+### Notes on the time/timezone handling
+
+- The backend forces its Postgres session timezone to UTC (`database.py`) and always stores/serves true UTC timestamps, regardless of the machine's local timezone — this matters for consistent behavior once containerized.
+- The frontend shifts every displayed timestamp by a fixed +3 hours ("Helsinki") for display only (`src/time.ts`); this is a flat offset, not DST-aware, matching what was asked for. All PnL/order logic still runs on the true UTC instants from the backend.
+
 ## Ports used
 
 | Service    | Port |

@@ -8,6 +8,7 @@ import {
   type UTCTimestamp,
 } from "lightweight-charts";
 import { useEffect, useRef } from "react";
+import { unrealizedPnl } from "../pnl";
 import { toChartTime } from "../time";
 import type { Candle, Trade } from "../types";
 
@@ -100,12 +101,7 @@ export function Chart({ candles, openTrades, currentPrice }: ChartProps) {
 
     for (const trade of openTrades) {
       const entryPrice = trade.entry_price ?? 0;
-      const pnl =
-        currentPrice !== null
-          ? trade.direction === "long"
-            ? currentPrice - entryPrice
-            : entryPrice - currentPrice
-          : null;
+      const pnl = currentPrice !== null ? unrealizedPnl(trade, currentPrice) : null;
       const pnlText = pnl !== null ? ` | PnL ${pnl >= 0 ? "+" : ""}${pnl.toFixed(2)}` : "";
       const entryTitle = `${trade.direction === "long" ? "Long" : "Short"} entry ${entryPrice.toFixed(2)}${pnlText}`;
 

@@ -73,15 +73,16 @@ needed, just don't delete `.npmrc`.
 ## 3. Using the app
 
 1. Open http://localhost:5173, pick MNQ, click **Start Session**. Every session starts at that instrument's NY AM open (9:30 America/New_York) on the first day of its data.
-2. Click **Next Candle** (or **Ctrl+Space**) to step forward. The **Step** dropdown controls how much underlying time each step advances (1m/5m/1h) — steps always land on an interval boundary minus one minute (e.g. 30m steps land at :29/:59 past the hour), matching how a candle of that size actually closes. The **Timeframe** dropdown only controls how candles are aggregated for display (1m/3m/5m/15m/30m/1h) and is independent of the step size — so you can watch a 15m candle build up 1-minute at a time.
-3. Place an order:
+2. The stats bar at the top shows the current replay time (fixed UTC+3 / "Helsinki" display), the total history available in the loaded dataset, account balance (starts at $50,000), realized PnL, and running (realized + unrealized) PnL.
+3. Click **Next Candle** (or **Ctrl+Space**) to step forward. The **Step** dropdown controls how much underlying time each step advances (1m/5m/1h) — steps always land on an interval boundary minus one minute (e.g. 30m steps land at :29/:59 past the hour), matching how a candle of that size actually closes. The **Timeframe** dropdown only controls how candles are aggregated for display (1m/3m/5m/15m/30m/1h) and is independent of the step size — so you can watch a 15m candle build up 1-minute at a time.
+4. Place an order:
    - **Market** — fills immediately at the current price.
    - **Limit** — set a trigger price to fill on a retrace (buy limit below market, sell limit above market).
    - **Stop** — set a trigger price to fill on a breakout (buy stop above market, sell stop below market).
    - Stop loss / take profit are required for all order types.
-4. A toast notification confirms entry (direction, SL, TP) as soon as a position actually opens (immediately for market, on trigger for limit/stop). The chart draws a live entry line (with running PnL), a red SL line, and a green TP line for each open position.
-5. Keep stepping — pending limit/stop orders are checked against every revealed candle's high/low and filled on touch; open positions are auto-closed on SL/TP touch (if both are touched in the same candle, stop loss is assumed to hit first).
-6. When the data runs out, any still-open positions are force-closed at the last close price, any still-pending orders are cancelled, and a session summary (trade count, win rate, total PnL) is shown.
+5. A toast notification confirms entry (direction, SL, TP) as soon as a position actually opens (immediately for market, on trigger for limit/stop). The chart draws a live entry line (with running PnL), a red SL line, and a green TP line for each open position.
+6. Keep stepping — pending limit/stop orders are checked against every revealed candle's high/low and filled on touch; open positions are auto-closed on SL/TP touch (if both are touched in the same candle, stop loss is assumed to hit first).
+7. When the data runs out, any still-open positions are force-closed at the last close price, any still-pending orders are cancelled, and a session summary (trade count, win rate, total PnL) is shown.
 
 If you ever see a "session not found" error (e.g. after the backend restarts and its in-memory dev data resets), the app now catches that automatically and returns you to the start screen instead of getting stuck.
 

@@ -4,9 +4,11 @@ import { api } from "./api";
 import { Chart } from "./components/Chart";
 import { SessionSummary } from "./components/SessionSummary";
 import { StatsBar } from "./components/StatsBar";
+import { StatsBar } from "./components/StatsBar";
 import { TradeForm } from "./components/TradeForm";
 import { TradesPanel } from "./components/TradesPanel";
 import { Toasts, type ToastMessage } from "./components/Toasts";
+import { realizedPnl, totalUnrealizedPnl } from "./pnl";
 import { realizedPnl, totalUnrealizedPnl } from "./pnl";
 import {
   STEP_MINUTES,
@@ -25,6 +27,8 @@ import {
 
 const STARTING_BALANCE = 50000;
 
+const STARTING_BALANCE = 50000;
+
 let toastCounter = 0;
 
 function App() {
@@ -33,7 +37,12 @@ function App() {
   const [session, setSession] = useState<ReplaySession | null>(null);
   const [chartCandles, setChartCandles] = useState<Candle[]>([]);
   const [lastPrice, setLastPrice] = useState<number | null>(null);
-  const [lastCandleTimestamp, setLastCandleTimestamp] = useState<string | null>(null);
+  const [lastCandleTimestamp, setLastCandleTimestamp] = useState<string | null>(
+    null,
+  );
+  const [lastCandleTimestamp, setLastCandleTimestamp] = useState<string | null>(
+    null,
+  );
   const [trades, setTrades] = useState<Trade[]>([]);
   const [summary, setSummary] = useState<SessionSummaryType | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -49,7 +58,10 @@ function App() {
   const addToast = (text: string, tone: ToastMessage["tone"] = "info") => {
     const id = ++toastCounter;
     setToasts((prev) => [...prev, { id, text, tone }]);
-    setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), 6000);
+    setTimeout(
+      () => setToasts((prev) => prev.filter((t) => t.id !== id)),
+      6000,
+    );
   };
 
   useEffect(() => {
@@ -66,6 +78,7 @@ function App() {
     setSession(null);
     setChartCandles([]);
     setLastPrice(null);
+    setLastCandleTimestamp(null);
     setLastCandleTimestamp(null);
     setTrades([]);
     setSummary(null);
@@ -89,6 +102,10 @@ function App() {
         api.getVisibleCandles(newSession.id, "1m"),
         api.listTrades(newSession.id),
       ]);
+      if (baseCandles.length > 0) {
+        setLastPrice(baseCandles[baseCandles.length - 1].close);
+        setLastCandleTimestamp(baseCandles[baseCandles.length - 1].timestamp);
+      }
       if (baseCandles.length > 0) {
         setLastPrice(baseCandles[baseCandles.length - 1].close);
         setLastCandleTimestamp(baseCandles[baseCandles.length - 1].timestamp);
@@ -121,9 +138,14 @@ function App() {
       if (res.candles.length > 0) {
         setLastPrice(res.candles[res.candles.length - 1].close);
         setLastCandleTimestamp(res.candles[res.candles.length - 1].timestamp);
+        setLastCandleTimestamp(res.candles[res.candles.length - 1].timestamp);
       }
 
-      if (res.filled_orders.length > 0 || res.closed_trades.length > 0 || res.cancelled_orders.length > 0) {
+      if (
+        res.filled_orders.length > 0 ||
+        res.closed_trades.length > 0 ||
+        res.cancelled_orders.length > 0
+      ) {
         const refreshed = await api.listTrades(current.id);
         setTrades(refreshed);
       }
@@ -131,18 +153,21 @@ function App() {
       for (const order of res.filled_orders) {
         addToast(
           `${order.direction === "long" ? "Long" : "Short"} position entered at ${order.entry_price?.toFixed(2)} (${order.order_type}). SL at ${order.stop_loss.toFixed(2)}; TP at ${order.take_profit.toFixed(2)}.`,
-          "success"
+          "success",
         );
       }
       for (const trade of res.closed_trades) {
         const won = (trade.pnl ?? 0) >= 0;
         addToast(
           `${trade.direction === "long" ? "Long" : "Short"} position closed at ${trade.exit_price?.toFixed(2)} (${trade.close_reason}). PnL ${won ? "+" : ""}${trade.pnl?.toFixed(2)}.`,
-          won ? "success" : "danger"
+          won ? "success" : "danger",
         );
       }
       if (res.cancelled_orders.length > 0) {
-        addToast(`${res.cancelled_orders.length} pending order(s) cancelled — session ended.`, "info");
+        addToast(
+          `${res.cancelled_orders.length} pending order(s) cancelled — session ended.`,
+          "info",
+        );
       }
 
       // Note: no fitTrigger bump here on purpose -- stepping should never
@@ -193,12 +218,12 @@ function App() {
       if (placed.status === "open") {
         addToast(
           `${placed.direction === "long" ? "Long" : "Short"} entered at ${placed.entry_price?.toFixed(2)}. SL at ${placed.stop_loss.toFixed(2)}; TP at ${placed.take_profit.toFixed(2)}.`,
-          "success"
+          "success",
         );
       } else {
         addToast(
           `${placed.order_type} order placed: ${placed.direction} at trigger ${placed.trigger_price?.toFixed(2)}. SL at ${placed.stop_loss.toFixed(2)}; TP at ${placed.take_profit.toFixed(2)}.`,
-          "info"
+          "info",
         );
       }
     } catch (err) {
@@ -230,7 +255,10 @@ function App() {
         <div className="start-panel">
           <label>
             Instrument
-            <select value={selectedSymbol} onChange={(e) => setSelectedSymbol(e.target.value)}>
+            <select
+              value={selectedSymbol}
+              onChange={(e) => setSelectedSymbol(e.target.value)}
+            >
               {instruments.map((inst) => (
                 <option key={inst.id} value={inst.symbol}>
                   {inst.symbol} - {inst.name} ({inst.candle_count} candles)
@@ -271,7 +299,12 @@ function App() {
                 </span>
                 <label className="inline-label">
                   Timeframe
-                  <select value={timeframe} onChange={(e) => handleTimeframeChange(e.target.value as Timeframe)}>
+                  <select
+                    value={timeframe}
+                    onChange={(e) =>
+                      handleTimeframeChange(e.target.value as Timeframe)
+                    }
+                  >
                     {TIMEFRAMES.map((tf) => (
                       <option key={tf} value={tf}>
                         {tf}
@@ -281,7 +314,10 @@ function App() {
                 </label>
                 <label className="inline-label">
                   Step
-                  <select value={stepSize} onChange={(e) => setStepSize(e.target.value as StepSize)}>
+                  <select
+                    value={stepSize}
+                    onChange={(e) => setStepSize(e.target.value as StepSize)}
+                  >
                     {STEP_SIZES.map((s) => (
                       <option key={s} value={s}>
                         {s}
@@ -291,11 +327,20 @@ function App() {
                 </label>
                 <span className="hint">Ctrl+Space also advances</span>
               </div>
-              {isFinished && summary && <SessionSummary summary={summary} onRestart={() => resetToStart()} />}
+              {isFinished && summary && (
+                <SessionSummary
+                  summary={summary}
+                  onRestart={() => resetToStart()}
+                />
+              )}
             </div>
 
             <div className="side-column">
-              <TradeForm currentPrice={lastPrice} disabled={isFinished} onSubmit={handlePlaceOrder} />
+              <TradeForm
+                currentPrice={lastPrice}
+                disabled={isFinished}
+                onSubmit={handlePlaceOrder}
+              />
               <TradesPanel trades={trades} currentPrice={lastPrice} />
             </div>
           </div>

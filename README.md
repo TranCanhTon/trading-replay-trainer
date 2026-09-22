@@ -95,12 +95,12 @@ needed, just don't delete `.npmrc`.
 
 1. Open http://localhost:5173, pick MNQ, click **Start Session**. Every session starts at that instrument's NY AM open (9:30 America/New_York) on the first day of its data.
 2. The stats bar at the top shows the current replay time (fixed UTC+3 / "Helsinki" display), the total history available in the loaded dataset, account balance (starts at $50,000), realized PnL, and running (realized + unrealized) PnL.
-3. Click **Next Candle** (or **Ctrl+Space**) to step forward. The **Step** dropdown controls how much underlying time each step advances (1m/5m/1h) — steps always land on an interval boundary minus one minute (e.g. 30m steps land at :29/:59 past the hour), matching how a candle of that size actually closes. The **Timeframe** dropdown only controls how candles are aggregated for display (1m/3m/5m/15m/30m/1h) and is independent of the step size — so you can watch a 15m candle build up 1-minute at a time. The chart auto-fits when you start a session or switch timeframe, but otherwise keeps whatever zoom/pan you set — stepping never yanks the view back.
+3. Click **Next Candle** (or **Ctrl+Space**) to step forward. The **Step** dropdown controls how much underlying time each step advances (1m/5m/1h) — steps always land on an interval boundary minus one minute (e.g. 30m steps land at :29/:59 past the hour), matching how a candle of that size actually closes. The **Timeframe** dropdown only controls how candles are aggregated for display (1m/3m/5m/15m/30m/1h) and is independent of the step size — so you can watch a 15m candle build up 1-minute at a time.
 4. Place an order:
    - **Market** — fills immediately at the current price.
    - **Limit** — set a trigger price to fill on a retrace (buy limit below market, sell limit above market).
    - **Stop** — set a trigger price to fill on a breakout (buy stop above market, sell stop below market).
-   - Stop loss / take profit are required for all order types. Pending limit/stop orders show a dotted purple trigger line (plus preview SL/TP lines) on the chart immediately; once filled they switch to the solid entry-line style with live PnL in the label.
+   - Stop loss / take profit are required for all order types.
 5. A toast notification confirms entry (direction, SL, TP) as soon as a position actually opens (immediately for market, on trigger for limit/stop). The chart draws a live entry line (with running PnL), a red SL line, and a green TP line for each open position.
 6. Keep stepping — pending limit/stop orders are checked against every revealed candle's high/low and filled on touch; open positions are auto-closed on SL/TP touch (if both are touched in the same candle, stop loss is assumed to hit first).
 7. When the data runs out, any still-open positions are force-closed at the last close price, any still-pending orders are cancelled, and a session summary (trade count, win rate, total PnL) is shown.
@@ -115,24 +115,24 @@ If you ever see a "session not found" error (e.g. after the backend restarts and
 
 ## Ports used
 
-| Service    | Port |
-|------------|------|
-| Backend    | 8000 |
-| Frontend   | 5173 |
-| Postgres   | 5432 |
+| Service  | Port |
+| -------- | ---- |
+| Backend  | 8000 |
+| Frontend | 5173 |
+| Postgres | 5432 |
 
 ## API endpoints (backend)
 
-| Method | Path                                    | Purpose |
-|--------|------------------------------------------|---------|
-| GET    | /instruments                              | List instruments and candle counts |
-| POST   | /sessions                                 | Start a replay session (`instrument_symbol`); always anchors to that instrument's NY AM (9:30 ET) open |
-| GET    | /sessions/{id}                            | Session state |
-| GET    | /sessions/{id}/candles?timeframe=15m      | Candles visible so far, aggregated to the given display timeframe (1m/3m/5m/15m/30m/1h) |
-| POST   | /sessions/{id}/next                       | Advance `step_minutes` (default 1) base candles; fills pending orders and closes open trades on any SL/TP/trigger touched along the way |
-| POST   | /sessions/{id}/trades                     | Place an order (`direction`, `order_type`: market/limit/stop, `price` [trigger, required for limit/stop], `stop_loss`, `take_profit`) |
-| GET    | /sessions/{id}/trades                     | List orders/trades (pending, open, closed, cancelled) |
-| GET    | /sessions/{id}/summary                    | PnL, win rate, trade/pending/cancelled counts |
+| Method | Path                                 | Purpose                                                                                                                                 |
+| ------ | ------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------- |
+| GET    | /instruments                         | List instruments and candle counts                                                                                                      |
+| POST   | /sessions                            | Start a replay session (`instrument_symbol`); always anchors to that instrument's NY AM (9:30 ET) open                                  |
+| GET    | /sessions/{id}                       | Session state                                                                                                                           |
+| GET    | /sessions/{id}/candles?timeframe=15m | Candles visible so far, aggregated to the given display timeframe (1m/3m/5m/15m/30m/1h)                                                 |
+| POST   | /sessions/{id}/next                  | Advance `step_minutes` (default 1) base candles; fills pending orders and closes open trades on any SL/TP/trigger touched along the way |
+| POST   | /sessions/{id}/trades                | Place an order (`direction`, `order_type`: market/limit/stop, `price` [trigger, required for limit/stop], `stop_loss`, `take_profit`)   |
+| GET    | /sessions/{id}/trades                | List orders/trades (pending, open, closed, cancelled)                                                                                   |
+| GET    | /sessions/{id}/summary               | PnL, win rate, trade/pending/cancelled counts                                                                                           |
 
 Order lifecycle: `pending` (limit/stop waiting to trigger) → `open` (position
 live) → `closed` (SL/TP/session-end) or `cancelled` (pending order never

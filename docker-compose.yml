@@ -36,44 +36,5 @@ services:
     depends_on:
       - backend
 
-  docker-build:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Build and start containers
-        run: docker compose up --build -d
-
-      - name: Wait for backend to be healthy
-        run: |
-          for i in $(seq 1 15); do
-            if curl -sf http://localhost:8000/health; then
-              echo "Backend is up"
-              exit 0
-            fi
-            echo "Waiting for backend..."
-            sleep 2
-          done
-          echo "Backend never became healthy"
-          docker compose logs
-          exit 1
-      - name: Wait for frontend to be healthy
-        run: |
-          for i in $(seq 1 15); do
-            if curl -sf http://localhost:5173/; then
-              echo "Frontend is up"
-              exit 0
-            fi
-            echo "Waiting for frontend..."
-            sleep 2
-          done
-          echo "Frontend never became healthy"
-          docker compose logs
-          exit 1
-
-      - name: Tear down
-        if: always()
-        run: docker compose down -v
-
 volumes:
   db_data:

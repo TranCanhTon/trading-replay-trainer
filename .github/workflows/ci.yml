@@ -22,7 +22,9 @@ jobs:
 
       - name: Run tests
         working-directory: backend
-        run: pytest
+        env:
+          DATABASE_URL: postgresql+psycopg2://user:pass@localhost:5432/test_db
+        run: python -m pytest
 
   frontend-tests:
     runs-on: ubuntu-latest

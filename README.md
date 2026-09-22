@@ -10,7 +10,7 @@ instrument.
 ```
 backend/     FastAPI app (Python, Postgres via SQLAlchemy)
 frontend/    React + TradingView lightweight-charts (Vite)
-data/        CSV candle data (synthetic MNQ for now)
+data/        CSV candle data (synthetic or real, per instrument)
 ```
 
 ## Prerequisites (already set up on this machine)
@@ -40,6 +40,19 @@ Load candle data (already done once; re-run any time to reload/replace):
 cd backend
 ./venv/Scripts/python.exe scripts/generate_synthetic_data.py --symbol MNQ --count 3000
 ./venv/Scripts/python.exe scripts/load_data.py --symbol MNQ --name "Micro E-mini Nasdaq-100" --file ../data/MNQ_1m.csv
+```
+
+Or load real historical data from Yahoo Finance instead of synthetic data
+(no API key needed; 1m bars only cover the trailing ~7 days, use a coarser
+`--interval` for a longer history):
+
+```bash
+cd backend
+./venv/Scripts/python.exe scripts/fetch_yfinance_data.py --ticker MNQ=F --symbol MNQ --interval 1m --period 7d
+./venv/Scripts/python.exe scripts/load_data.py --symbol MNQ --name "Micro E-mini Nasdaq-100" --file ../data/MNQ_1m.csv
+
+./venv/Scripts/python.exe scripts/fetch_yfinance_data.py --ticker ES=F --symbol ES --interval 1m --period 7d
+./venv/Scripts/python.exe scripts/load_data.py --symbol ES --name "E-mini S&P 500" --file ../data/ES_1m.csv
 ```
 
 Run the API:

@@ -1,3 +1,5 @@
+from datetime import datetime, timezone
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func
 from sqlalchemy.orm import Session
@@ -11,6 +13,7 @@ from app.schemas.candle import CandleOut
 from app.schemas.session import NextCandleRequest, NextCandleResponse, SessionCreate, SessionOut, SessionSummary
 from app.schemas.trade import TradeOut
 from app.services.resample import TIMEFRAME_MINUTES, resample_candles
+from app.services.session_clock import epoch_minutes, find_ny_am_open_index, next_aligned_epoch_minute
 from app.services.trading import cancel_pending_orders, check_and_close_open_trades, check_and_fill_pending_orders, close_trade
 
 router = APIRouter(prefix="/sessions", tags=["sessions"])
@@ -47,12 +50,11 @@ def create_session(payload: SessionCreate, db: Session = Depends(get_db)):
     if total == 0:
         raise HTTPException(status_code=400, detail="instrument has no candle data loaded")
 
-    if payload.warmup_candles < 1:
-        raise HTTPException(status_code=400, detail="warmup_candles must be at least 1")
+    start_index = find_ny_am_open_index(db, instrument.id)
 
     session = ReplaySession(
         instrument_id=instrument.id,
-        current_index=min(payload.warmup_candles, total) - 1,
+        current_index=min(start_index, total - 1),
         status=SessionStatus.active,
     )
     db.add(session)
@@ -96,8 +98,24 @@ def advance_candle(session_id: int, payload: NextCandleRequest = NextCandleReque
 
     total = _total_candles(db, session.instrument_id)
     step = max(1, payload.step_minutes)
+
+    current_candle = (
+        db.query(Candle)
+        .filter(Candle.instrument_id == session.instrument_id, Candle.sequence == session.current_index)
+        .first()
+    )
+    current_epoch = epoch_minutes(current_candle.timestamp)
+    target_epoch = next_aligned_epoch_minute(current_epoch, step)
+    target_timestamp = datetime.fromtimestamp(target_epoch * 60, tz=timezone.utc)
+
     start_index = session.current_index + 1
-    end_index = min(start_index + step - 1, total - 1)
+    target_candle = (
+        db.query(Candle)
+        .filter(Candle.instrument_id == session.instrument_id, Candle.timestamp >= target_timestamp)
+        .order_by(Candle.sequence)
+        .first()
+    )
+    end_index = min(target_candle.sequence, total - 1) if target_candle else total - 1
 
     revealed_candles = (
         db.query(Candle)

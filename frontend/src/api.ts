@@ -29,10 +29,10 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 export const api = {
   listInstruments: () => request<Instrument[]>("/instruments"),
 
-  createSession: (instrumentSymbol: string, warmupCandles = 50) =>
+  createSession: (instrumentSymbol: string) =>
     request<ReplaySession>("/sessions", {
       method: "POST",
-      body: JSON.stringify({ instrument_symbol: instrumentSymbol, warmup_candles: warmupCandles }),
+      body: JSON.stringify({ instrument_symbol: instrumentSymbol }),
     }),
 
   getSession: (sessionId: number) => request<ReplaySession>(`/sessions/${sessionId}`),

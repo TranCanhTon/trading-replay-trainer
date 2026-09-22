@@ -72,8 +72,8 @@ needed, just don't delete `.npmrc`.
 
 ## 3. Using the app
 
-1. Open http://localhost:5173, pick MNQ, click **Start Session** (starts you 50 candles in so the chart isn't empty).
-2. Click **Next Candle** (or **Ctrl+Space**) to step forward. The **Step** dropdown controls how much underlying time each step advances (1m/5m/1h), independent of the **Timeframe** dropdown, which only controls how candles are aggregated for display (3m/5m/15m/30m/1h) — so you can watch a 15m candle build up 1-minute at a time.
+1. Open http://localhost:5173, pick MNQ, click **Start Session**. Every session starts at that instrument's NY AM open (9:30 America/New_York) on the first day of its data.
+2. Click **Next Candle** (or **Ctrl+Space**) to step forward. The **Step** dropdown controls how much underlying time each step advances (1m/5m/1h) — steps always land on an interval boundary minus one minute (e.g. 30m steps land at :29/:59 past the hour), matching how a candle of that size actually closes. The **Timeframe** dropdown only controls how candles are aggregated for display (1m/3m/5m/15m/30m/1h) and is independent of the step size — so you can watch a 15m candle build up 1-minute at a time.
 3. Place an order:
    - **Market** — fills immediately at the current price.
    - **Limit** — set a trigger price to fill on a retrace (buy limit below market, sell limit above market).
@@ -89,6 +89,7 @@ If you ever see a "session not found" error (e.g. after the backend restarts and
 
 - The backend forces its Postgres session timezone to UTC (`database.py`) and always stores/serves true UTC timestamps, regardless of the machine's local timezone — this matters for consistent behavior once containerized.
 - The frontend shifts every displayed timestamp by a fixed +3 hours ("Helsinki") for display only (`src/time.ts`); this is a flat offset, not DST-aware, matching what was asked for. All PnL/order logic still runs on the true UTC instants from the backend.
+- The NY AM session anchor uses real `America/New_York` DST rules (via Python's `zoneinfo`, backed by the `tzdata` package since Windows has no system tz database) to find 9:30 ET precisely, since that's a well-defined real-world market time.
 
 ## Ports used
 
@@ -103,7 +104,7 @@ If you ever see a "session not found" error (e.g. after the backend restarts and
 | Method | Path                                    | Purpose |
 |--------|------------------------------------------|---------|
 | GET    | /instruments                              | List instruments and candle counts |
-| POST   | /sessions                                 | Start a replay session (`instrument_symbol`, `warmup_candles`) |
+| POST   | /sessions                                 | Start a replay session (`instrument_symbol`); always anchors to that instrument's NY AM (9:30 ET) open |
 | GET    | /sessions/{id}                            | Session state |
 | GET    | /sessions/{id}/candles?timeframe=15m      | Candles visible so far, aggregated to the given display timeframe (1m/3m/5m/15m/30m/1h) |
 | POST   | /sessions/{id}/next                       | Advance `step_minutes` (default 1) base candles; fills pending orders and closes open trades on any SL/TP/trigger touched along the way |

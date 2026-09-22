@@ -75,7 +75,7 @@ function App() {
     setError(null);
     setLoading(true);
     try {
-      const newSession = await api.createSession(selectedSymbol, 50);
+      const newSession = await api.createSession(selectedSymbol);
       setSession(newSession);
       setSummary(null);
       const [baseCandles, sessionTrades] = await Promise.all([

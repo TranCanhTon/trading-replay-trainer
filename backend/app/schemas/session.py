@@ -6,8 +6,7 @@ from app.schemas.trade import TradeOut
 
 
 class SessionCreate(BaseModel):
-    instrument_symbol: str
-    warmup_candles: int = 50  # how many 1-minute candles are visible before the player takes control
+    instrument_symbol: str  # session always starts at the instrument's NY AM (9:30 ET) open
 
 
 class SessionOut(BaseModel):

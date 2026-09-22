@@ -4,11 +4,9 @@ import { api } from "./api";
 import { Chart } from "./components/Chart";
 import { SessionSummary } from "./components/SessionSummary";
 import { StatsBar } from "./components/StatsBar";
-import { StatsBar } from "./components/StatsBar";
 import { TradeForm } from "./components/TradeForm";
 import { TradesPanel } from "./components/TradesPanel";
 import { Toasts, type ToastMessage } from "./components/Toasts";
-import { realizedPnl, totalUnrealizedPnl } from "./pnl";
 import { realizedPnl, totalUnrealizedPnl } from "./pnl";
 import {
   STEP_MINUTES,
@@ -27,8 +25,6 @@ import {
 
 const STARTING_BALANCE = 50000;
 
-const STARTING_BALANCE = 50000;
-
 let toastCounter = 0;
 
 function App() {
@@ -40,9 +36,7 @@ function App() {
   const [lastCandleTimestamp, setLastCandleTimestamp] = useState<string | null>(
     null,
   );
-  const [lastCandleTimestamp, setLastCandleTimestamp] = useState<string | null>(
-    null,
-  );
+
   const [trades, setTrades] = useState<Trade[]>([]);
   const [summary, setSummary] = useState<SessionSummaryType | null>(null);
   const [error, setError] = useState<string | null>(null);

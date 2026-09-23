@@ -17,3 +17,8 @@ node_modules/
 # OS / editor
 .DS_Store
 .vscode/
+
+# root tooling
+node_modules/
+.npm-cache/
+.env

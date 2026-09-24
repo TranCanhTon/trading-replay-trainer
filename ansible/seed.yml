@@ -1,0 +1,22 @@
+- name: Load candle data
+  hosts: web
+  become: true
+
+  vars:
+    app_dir: /opt/replay-trainer
+    compose: docker compose -f docker-compose.yml -f docker-compose.prod.yml
+    instruments:
+      - { symbol: MNQ, name: "Micro E-mini Nasdaq-100", file: MNQ_1m.csv }
+      - { symbol: ES, name: "E-mini S&P 500", file: ES_1m.csv }
+
+  tasks:
+    - name: Load candles for {{ item.symbol }}
+      ansible.builtin.command:
+        cmd: >
+          {{ compose }} run --rm --no-deps
+          -v {{ app_dir }}/backend/scripts:/app/scripts:ro
+          -v {{ app_dir }}/data:/data:ro
+          backend python scripts/load_data.py
+          --symbol {{ item.symbol }} --name "{{ item.name }}" --file /data/{{ item.file }}
+        chdir: "{{ app_dir }}"
+      loop: "{{ instruments }}"

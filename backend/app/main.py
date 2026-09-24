@@ -4,10 +4,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
 from app.database import Base, engine
 from app.routers import instruments, sessions, trades
+from app.logging_config import configure_logging
 
+configure_logging()
 Base.metadata.create_all(bind=engine)
 
-app = FastAPI(title="Trading Replay Trainer API")
+app = FastAPI(title="Trading Replay Trainer APICCCCCCC")
 
 app.add_middleware(
     CORSMiddleware,

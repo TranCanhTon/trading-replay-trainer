@@ -64,6 +64,7 @@ jobs:
           echo "Backend never became healthy"
           docker compose logs
           exit 1
+
       - name: Wait for frontend to be healthy
         run: |
           for i in $(seq 1 15); do

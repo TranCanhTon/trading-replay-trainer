@@ -1,0 +1,52 @@
+- name: Deploy trading replay trainer
+  hosts: web
+  become: true
+
+  vars:
+    app_dir: /opt/replay-trainer
+    repo_url: https://github.com/TranCanhTon/trading-replay-trainer.git
+    app_branch: main
+    compose: docker compose -f docker-compose.yml -f docker-compose.prod.yml
+
+  tasks:
+    - name: Make sure git is installed
+      ansible.builtin.apt:
+        name: git
+        state: present
+        update_cache: true
+        cache_valid_time: 3600
+
+    - name: Get the latest code
+      ansible.builtin.git:
+        repo: "{{ repo_url }}"
+        dest: "{{ app_dir }}"
+        version: "{{ app_branch }}"
+
+    - name: Copy production env file
+      ansible.builtin.copy:
+        src: "{{ playbook_dir }}/../.env.prod"
+        dest: "{{ app_dir }}/.env"
+        owner: root
+        group: root
+        mode: "0600"
+
+    - name: Build and start containers
+      ansible.builtin.command:
+        cmd: "{{ compose }} up -d --build"
+        chdir: "{{ app_dir }}"
+      register: compose_up
+      changed_when: "'Started' in compose_up.stderr or 'Recreated' in compose_up.stderr"
+
+    - name: Wait for the app to respond
+      ansible.builtin.uri:
+        url: http://localhost/api/health
+        status_code: 200
+      register: health
+      until: health.status == 200
+      retries: 30
+      delay: 5
+
+    - name: Remove old unused images
+      ansible.builtin.command: docker image prune -f
+      register: prune
+      changed_when: "'Total reclaimed space: 0B' not in prune.stdout"

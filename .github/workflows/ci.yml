@@ -49,11 +49,14 @@ jobs:
       POSTGRES_USER: replay_trainer
       POSTGRES_PASSWORD: replay_trainer_password
       POSTGRES_DB: replay_trainer_db
-      DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
-      CORS_ORIGINS: http://localhost:5173
+      DATABASE_URL: postgresql+psycopg2://replay_trainer:replay_trainer_password@db:5432/replay_trainer_db      CORS_ORIGINS: http://localhost:5173
 
     steps:
       - uses: actions/checkout@v4
 
       - name: Build and start containers
         run: docker compose up --build -d
+
+      - name: Show logs on failure
+        if: failure()
+        run: docker compose logs --no-color

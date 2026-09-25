@@ -240,7 +240,7 @@ function App() {
     <div className="app">
       <Toasts toasts={toasts} />
       <header>
-        <h1>Trading Replay Trainer</h1>
+        <h1>I hate this shit bro life can not be just this</h1>
       </header>
 
       {error && <p className="error banner">{error}</p>}

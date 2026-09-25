@@ -16,6 +16,7 @@ services:
     networks: [replay_net]
 
   backend:
+    image: ghcr.io/trancanhton/replay-trainer-backend:${IMAGE_TAG:-latest}
     build: ./backend
     environment:
       DATABASE_URL: ${DATABASE_URL}
@@ -39,6 +40,7 @@ services:
     networks: [replay_net]
 
   frontend:
+    image: ghcr.io/trancanhton/replay-trainer-frontend:${IMAGE_TAG:-latest}
     build:
       context: ./frontend
       args:

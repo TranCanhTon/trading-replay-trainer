@@ -1,0 +1,82 @@
+name: Deploy
+
+on:
+  workflow_call:
+    inputs:
+      image_tag:
+        type: string
+        required: true
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: "Full commit SHA to deploy (40 characters)"
+        type: string
+        required: true
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    concurrency:
+      group: production-deploy
+      cancel-in-progress: false
+    env:
+      IMAGE_TAG: ${{ inputs.image_tag }}
+      SG_ID: ${{ vars.SECURITY_GROUP_ID }}
+
+    steps:
+      - name: Check the tag is a full commit SHA
+        run: |
+          if [[ ! "$IMAGE_TAG" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "::error::image_tag must be a full 40 character commit SHA, got '$IMAGE_TAG'"
+            exit 1
+          fi
+
+      - uses: actions/checkout@v4
+
+      - name: Get temporary AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Find this runner's public IP
+        id: ip
+        run: echo "ip=$(curl -fsS https://checkip.amazonaws.com)" >> "$GITHUB_OUTPUT"
+
+      - name: Allow SSH from this runner
+        id: open_ssh
+        run: |
+          aws ec2 authorize-security-group-ingress \
+            --group-id "$SG_ID" \
+            --ip-permissions "IpProtocol=tcp,FromPort=22,ToPort=22,IpRanges=[{CidrIp=${{ steps.ip.outputs.ip }}/32,Description=github-actions-deploy}]"
+
+      - name: Install Ansible
+        run: pipx install ansible-core
+
+      - name: Write SSH key, host key and env file
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SSH_KNOWN_HOSTS: ${{ vars.SSH_KNOWN_HOSTS }}
+          ENV_PROD: ${{ secrets.ENV_PROD }}
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/trading-key.pem
+          chmod 600 ~/.ssh/trading-key.pem
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          printf '%s\n' "$ENV_PROD" > .env.prod
+
+      - name: Run the playbook
+        working-directory: ansible
+        run: ansible-playbook -i inventory.ini deploy.yml -e "image_tag=$IMAGE_TAG"
+
+      - name: Remove the SSH rule
+        if: always() && steps.open_ssh.outcome == 'success'
+        run: |
+          aws ec2 revoke-security-group-ingress \
+            --group-id "$SG_ID" \
+            --protocol tcp --port 22 \
+            --cidr "${{ steps.ip.outputs.ip }}/32"

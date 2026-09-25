@@ -5,8 +5,9 @@
   vars:
     app_dir: /opt/replay-trainer
     repo_url: https://github.com/TranCanhTon/trading-replay-trainer.git
-    app_branch: main
     compose: docker compose -f docker-compose.yml -f docker-compose.prod.yml
+    image_tag: latest
+    app_version: "{{ 'main' if image_tag == 'latest' else image_tag }}"
 
   tasks:
     - name: Make sure git is installed
@@ -16,11 +17,11 @@
         update_cache: true
         cache_valid_time: 3600
 
-    - name: Get the latest code
+    - name: Get the code for this version
       ansible.builtin.git:
         repo: "{{ repo_url }}"
         dest: "{{ app_dir }}"
-        version: "{{ app_branch }}"
+        version: "{{ app_version }}"
 
     - name: Copy production env file
       ansible.builtin.copy:
@@ -30,9 +31,21 @@
         group: root
         mode: "0600"
 
-    - name: Build and start containers
+    - name: Record which image version is live
+      ansible.builtin.lineinfile:
+        path: "{{ app_dir }}/.env"
+        regexp: "^IMAGE_TAG="
+        line: "IMAGE_TAG={{ image_tag }}"
+
+    - name: Pull the prebuilt images
       ansible.builtin.command:
-        cmd: "{{ compose }} up -d --build"
+        cmd: "{{ compose }} pull backend frontend"
+        chdir: "{{ app_dir }}"
+      changed_when: true
+
+    - name: Start containers
+      ansible.builtin.command:
+        cmd: "{{ compose }} up -d --no-build --remove-orphans"
         chdir: "{{ app_dir }}"
       register: compose_up
       changed_when: "'Started' in compose_up.stderr or 'Recreated' in compose_up.stderr"
@@ -46,7 +59,7 @@
       retries: 30
       delay: 5
 
-    - name: Remove old unused images
-      ansible.builtin.command: docker image prune -f
+    - name: Remove images no container is using
+      ansible.builtin.command: docker image prune -af
       register: prune
       changed_when: "'Total reclaimed space: 0B' not in prune.stdout"

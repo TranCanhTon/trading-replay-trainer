@@ -52,7 +52,7 @@
 
     - name: Wait for the app to respond
       ansible.builtin.uri:
-        url: http://localhost/api/health
+        url: http://localhost:8080/api/health
         status_code: 200
       register: health
       until: health.status == 200
